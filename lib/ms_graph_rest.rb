@@ -7,6 +7,7 @@ require_relative 'ms_graph_rest/mails'
 require_relative 'ms_graph_rest/error'
 require_relative 'ms_graph_rest/users'
 require_relative 'ms_graph_rest/subscriptions'
+require_relative 'ms_graph_rest/calendars'
 require_relative 'ms_graph_rest/calendar_view'
 require_relative 'ms_graph_rest/contacts'
 require_relative 'ms_graph_rest/messages'
@@ -160,6 +161,10 @@ module MsGraphRest
 
     def photos
       Photos.new(client: connection)
+    end
+
+    def calendars(path = 'me')
+      Calendars.new(path, client: connection)
     end
 
     def calendar_view(path = '/me/calendar/')
