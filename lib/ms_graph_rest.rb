@@ -74,31 +74,9 @@ module MsGraphRest
     Faraday::FileReadAdapter.folder = val
   end
 
-  class BaseConnection
-    attr_reader :access_token
-
-    def initialize(access_token:)
-      @access_token = access_token.to_str.clone.freeze
-    end
-  end
-
-  class FaradayConnection < BaseConnection
-    attr_reader :faraday_adapter
-
-    def initialize(access_token:, faraday_adapter:)
-      super(access_token: access_token)
-      @faraday_adapter = faraday_adapter
-    end
-
+  class FaradayConnection
     def conn
-      @conn ||= Faraday.new(url: 'https://graph.microsoft.com/v1.0/',
-                            headers: { 'Content-Type' => 'application/json' }) do |c|
-        c.use Faraday::Response::RaiseError
-        c.request :authorization, 'Bearer', access_token
-        c.adapter faraday_adapter
-        c.options.timeout = 120 # open/read timeout in seconds
-        c.options.open_timeout = 120 # connection open timeout in seconds
-      end
+      raise NotImplementedError
     end
 
     def get_raw(path, params)
@@ -141,11 +119,44 @@ module MsGraphRest
     end
   end
 
+  class FaradayTokenConnection < FaradayConnection
+    attr_reader :faraday_adapter
+    attr_reader :access_token
+
+    def initialize(access_token:, faraday_adapter:)
+      @access_token = access_token.to_str.clone.freeze
+      @faraday_adapter = faraday_adapter
+    end
+
+    def conn
+      @conn ||= Faraday.new(url: 'https://graph.microsoft.com/v1.0/',
+                            headers: { 'Content-Type' => 'application/json' }) do |c|
+        c.use Faraday::Response::RaiseError
+        c.request :authorization, 'Bearer', access_token
+        c.adapter faraday_adapter
+        c.options.timeout = 120 # open/read timeout in seconds
+        c.options.open_timeout = 120 # connection open timeout in seconds
+      end
+    end
+  end
+
+  class FaradayCustomConnection < FaradayConnection
+    attr_reader :base
+
+    def initialize(base)
+      @base = base
+    end
+
+    def conn
+      @base
+    end
+  end
+
   class Client
     attr_reader :connection
 
-    def initialize(access_token:, faraday_adapter: Faraday.default_adapter)
-      @connection = FaradayConnection.new(access_token: access_token, faraday_adapter: faraday_adapter)
+    def initialize(conn)
+      @connection = conn
     end
 
     def users
@@ -211,6 +222,6 @@ module MsGraphRest
 
   def self.new_client(access_token:)
     faraday_adapter = use_fake ? Faraday::FileReadAdapter : Faraday.default_adapter
-    Client.new(access_token: access_token, faraday_adapter: faraday_adapter)
+    Client.new(FaradayTokenConnection.new(access_token: access_token, faraday_adapter: faraday_adapter))
   end
 end
