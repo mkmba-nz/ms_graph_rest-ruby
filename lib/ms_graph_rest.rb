@@ -70,6 +70,8 @@ end
 module MsGraphRest
   cattr_accessor :use_fake
 
+  API_URL = 'https://graph.microsoft.com/v1.0/'
+
   def self.fake_folder=(val)
     Faraday::FileReadAdapter.folder = val
   end
@@ -129,7 +131,7 @@ module MsGraphRest
     end
 
     def conn
-      @conn ||= Faraday.new(url: 'https://graph.microsoft.com/v1.0/',
+      @conn ||= Faraday.new(url: API_URL,
                             headers: { 'Content-Type' => 'application/json' }) do |c|
         c.use Faraday::Response::RaiseError
         c.request :authorization, 'Bearer', access_token
@@ -145,6 +147,7 @@ module MsGraphRest
 
     def initialize(base)
       @base = base
+      @base.url_prefix = API_URL unless @base.url_prefix.host
     end
 
     def conn
