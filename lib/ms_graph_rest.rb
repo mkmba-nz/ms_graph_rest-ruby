@@ -74,19 +74,12 @@ module MsGraphRest
     Faraday::FileReadAdapter.folder = val
   end
 
-  class BaseConnection
-    attr_reader :access_token
-
-    def initialize(access_token:)
-      @access_token = access_token.to_str.clone.freeze
-    end
-  end
-
-  class FaradayConnection < BaseConnection
+  class FaradayConnection
+    attr_reader :auth_callback
     attr_reader :faraday_adapter
 
-    def initialize(access_token:, faraday_adapter:)
-      super(access_token: access_token)
+    def initialize(auth_callback:, faraday_adapter:)
+      @auth_callback = auth_callback
       @faraday_adapter = faraday_adapter
     end
 
@@ -94,7 +87,7 @@ module MsGraphRest
       @conn ||= Faraday.new(url: 'https://graph.microsoft.com/v1.0/',
                             headers: { 'Content-Type' => 'application/json' }) do |c|
         c.use Faraday::Response::RaiseError
-        c.request :authorization, 'Bearer', access_token
+        @auth_callback.call(c)
         c.adapter faraday_adapter
         c.options.timeout = 120 # open/read timeout in seconds
         c.options.open_timeout = 120 # connection open timeout in seconds
@@ -144,8 +137,9 @@ module MsGraphRest
   class Client
     attr_reader :connection
 
-    def initialize(access_token:, faraday_adapter: Faraday.default_adapter)
-      @connection = FaradayConnection.new(access_token: access_token, faraday_adapter: faraday_adapter)
+    def initialize(auth:, faraday_adapter: Faraday.default_adapter)
+      cb = auth.is_a?(String) ? ->(c) { c.request :authorization, 'Bearer', access_token} : auth
+      @connection = FaradayConnection.new(auth_callback: cb, faraday_adapter: faraday_adapter)
     end
 
     def users
@@ -211,6 +205,6 @@ module MsGraphRest
 
   def self.new_client(access_token:)
     faraday_adapter = use_fake ? Faraday::FileReadAdapter : Faraday.default_adapter
-    Client.new(access_token: access_token, faraday_adapter: faraday_adapter)
+    Client.new(auth: access_token, faraday_adapter: faraday_adapter)
   end
 end
