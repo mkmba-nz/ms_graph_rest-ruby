@@ -42,8 +42,8 @@ module MsGraphRest
     def get(select: nil, filter: nil, skiptoken: nil)
       Response.new(client.get("#{path}/calendars",
                               query.merge({ '$select' => select,
-                              '$filter' => filter,
-                              '$skiptoken' => skiptoken }.compact)))
+                                            '$filter' => filter,
+                                            '$skiptoken' => skiptoken }.compact)))
     end
 
     def filter(val)
@@ -58,8 +58,7 @@ module MsGraphRest
     private
 
     def new_with_query(query)
-      self.class.new(client: client,
-                     query: query)
+      self.class.new(path, client: client, query: query)
     end
   end
 end
