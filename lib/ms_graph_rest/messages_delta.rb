@@ -12,7 +12,7 @@ module MsGraphRest
         return nil unless odata_next_link
 
         uri = URI.parse(odata_next_link)
-        params = CGI.parse(uri.query)
+        params = URI.decode_www_form(uri.query).group_by(&:first).transform_values { |v| v.map(&:last) }
         { skiptoken: params["$skiptoken"]&.first }.compact
       end
 
@@ -20,7 +20,7 @@ module MsGraphRest
         return nil unless odata_delta_link
 
         uri = URI.parse(odata_delta_link)
-        params = CGI.parse(uri.query)
+        params = URI.decode_www_form(uri.query).group_by(&:first).transform_values { |v| v.map(&:last) }
         { deltatoken: params["$deltatoken"]&.first }.compact
       end
 
