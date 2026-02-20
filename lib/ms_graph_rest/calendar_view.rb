@@ -15,15 +15,21 @@ module MsGraphRest
       end
 
       def next_get_query
-        return nil unless odata_next_link
+        params = parse_next_link_params
+        return nil unless params
 
-        uri = URI.parse(odata_next_link)
-        params = URI.decode_www_form(uri.query).group_by(&:first).transform_values { |v| v.map(&:last) }
         { start_date_time: params["startDateTime"]&.first,
           end_date_time: params["endDateTime"]&.first,
           skip: params["$skip"]&.first,
           top: params["$top"]&.first,
           select: params["$select"]&.first }.compact
+      end
+
+      def parse_next_link_params
+        return nil unless odata_next_link
+
+        uri = URI.parse(odata_next_link)
+        URI.decode_www_form(uri.query).group_by(&:first).transform_values { |v| v.map(&:last) }
       end
 
       def size
