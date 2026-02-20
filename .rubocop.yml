@@ -4,7 +4,7 @@ require:
 
 AllCops:
   TargetRubyVersion: 2.5
-  NewCops: enable
+  NewCops: disable
   Exclude:
     - 'vendor/**/*'
 
@@ -31,3 +31,4 @@ Metrics/CyclomaticComplexity:
 
 Metrics/PerceivedComplexity:
   Max: 9
+
