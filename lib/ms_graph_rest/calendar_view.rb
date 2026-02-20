@@ -18,7 +18,7 @@ module MsGraphRest
         return nil unless odata_next_link
 
         uri = URI.parse(odata_next_link)
-        params = CGI.parse(uri.query)
+        params = URI.decode_www_form(uri.query).group_by(&:first).transform_values { |v| v.map(&:last) }
         { start_date_time: params["startDateTime"]&.first,
           end_date_time: params["endDateTime"]&.first,
           skip: params["$skip"]&.first,
