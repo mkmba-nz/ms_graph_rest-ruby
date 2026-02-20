@@ -11,6 +11,7 @@ gem 'rubocop-rake'
 gem 'rubocop-rspec'
 gem 'simplecov'
 gem 'webmock'
+gem 'ostruct'
 
 if ENV['GEM_VERSIONS'] == 'min'
   gem 'faraday', '~> 1.0.0'
