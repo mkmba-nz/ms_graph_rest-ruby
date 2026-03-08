@@ -44,10 +44,7 @@ module MsGraphRest
   class NotFoundErrorCreator
     def self.error(faraday_error)
       if faraday_error.response
-        parsed_error = MultiJson.load(faraday_error.response[:body] || '{}')
-        message = parsed_error.dig("error", "message")
-        code = parsed_error.dig("error", "code")
-
+        message, code = parse_error_fields(faraday_error.response[:body])
         return UserNotFound.new(faraday_error) if message == 'User not found'
         return ResourceNotDiscovered.new(faraday_error) if message == 'Resource could not be discovered.'
         return MailboxNotEnabledError.new(faraday_error) if code == 'MailboxNotEnabledForRESTAPI'
@@ -57,6 +54,11 @@ module MsGraphRest
       ResourceNotFound.new(faraday_error)
     rescue TypeError, MultiJson::ParseError
       ResourceNotFound.new(faraday_error)
+    end
+
+    def self.parse_error_fields(body)
+      parsed = MultiJson.load(body || '{}') || {}
+      [parsed.dig("error", "message") || "unknown", parsed.dig("error", "code") || "unknown"]
     end
   end
 
@@ -82,7 +84,7 @@ module MsGraphRest
     end
 
     def self.extract_msg_and_code(ms_error)
-      ms_error_code = JSON.parse(ms_error.response[:body] || '{}').dig("error")
+      ms_error_code = (JSON.parse(ms_error.response[:body] || '{}') || {}).dig("error") || {}
       ms_error_msg = nil
       if ms_error_code.is_a?(Hash)
         ms_error_msg = ms_error_code["message"]
@@ -111,9 +113,9 @@ module MsGraphRest
     end
 
     def self.error_from_body(faraday_error)
-      parsed_error = MultiJson.load(faraday_error.response[:body] || '{}')
-      message = parsed_error.dig("error", "message")
-      code = parsed_error.dig("error", "code")
+      parsed_error = MultiJson.load(faraday_error.response[:body] || '{}') || {}
+      message = parsed_error.dig("error", "message") || "unknown"
+      code = parsed_error.dig("error", "code") || "unknown"
 
       if code == 'ApplicationThrottled'
         return application_throttled_error_class(message).new(faraday_error)
@@ -167,9 +169,9 @@ module MsGraphRest
       begin
         status = response[:status]
         message = response[:body]
-        parsed_error = MultiJson.load(response[:body] || '{}')
-        message = parsed_error.dig("error", "message")
-        error_code = parsed_error.dig("error", "code")
+        parsed_error = MultiJson.load(response[:body] || '{}') || {}
+        message = parsed_error.dig("error", "message") || "unknown"
+        error_code = parsed_error.dig("error", "code") || "unknown"
       rescue TypeError, MultiJson::ParseError
         # nop
       end
