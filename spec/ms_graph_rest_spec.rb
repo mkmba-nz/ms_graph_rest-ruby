@@ -18,6 +18,28 @@ RSpec.describe MsGraphRest do
       end
     end
 
+    context 'with an injected Faraday connection' do
+      subject { described_class.new(faraday_connection: faraday).connection }
+
+      let(:faraday) do
+        Faraday.new(url: 'https://graph.microsoft.com/v1.0/') do |c|
+          c.use Faraday::Response::RaiseError
+          c.adapter :test do |stub|
+            stub.get('/v1.0/me') { [200, { 'Content-Type' => 'application/json' }, '{"mail":"a@b.c"}'] }
+            stub.get('/v1.0/missing') { [404, {}, ''] }
+          end
+        end
+      end
+
+      it 'sends requests through the injected connection' do
+        expect(subject.get('me', {})).to eq('mail' => 'a@b.c')
+      end
+
+      it 'wraps Faraday errors raised by the injected connection' do
+        expect { subject.get('missing', {}) }.to raise_error(MsGraphRest::ResourceNotFound)
+      end
+    end
+
     context 'when parsing error' do
       subject { described_class.new(access_token: 'access_token').connection }
 

@@ -79,7 +79,12 @@ module MsGraphRest
     attr_reader :auth_callback
     attr_reader :faraday_adapter
 
-    def initialize(auth_callback:, faraday_adapter:)
+    # Pass `conn` to use a pre-built Faraday connection instead of building one
+    # from auth_callback/faraday_adapter. The connection must raise
+    # Faraday::Error subclasses for non-2xx responses (e.g. via
+    # Faraday::Response::RaiseError) for error wrapping to work.
+    def initialize(auth_callback: nil, faraday_adapter: nil, conn: nil)
+      @conn = conn
       @auth_callback = auth_callback
       @faraday_adapter = faraday_adapter
     end
@@ -138,9 +143,17 @@ module MsGraphRest
   class Client
     attr_reader :connection
 
-    def initialize(access_token:, faraday_adapter: Faraday.default_adapter, auth_callback: nil)
-      auth_callback ||= ->(c) { c.request :authorization, 'Bearer', access_token }
-      @connection = FaradayConnection.new(auth_callback: auth_callback, faraday_adapter: faraday_adapter)
+    # Build with either a pre-built Faraday connection (faraday_connection:) or
+    # the parameters to construct one (access_token:/auth_callback: plus
+    # faraday_adapter:).
+    def initialize(access_token: nil, faraday_adapter: Faraday.default_adapter, auth_callback: nil,
+                   faraday_connection: nil)
+      @connection = if faraday_connection
+                      FaradayConnection.new(conn: faraday_connection)
+                    else
+                      auth_callback ||= ->(c) { c.request :authorization, 'Bearer', access_token }
+                      FaradayConnection.new(auth_callback: auth_callback, faraday_adapter: faraday_adapter)
+                    end
     end
 
     def users
