@@ -47,7 +47,7 @@ class Faraday::FileReadAdapter < Faraday::Adapter
     data = File.read(filename(method, path, filename))
     save_response(env, 200, data)
   rescue Errno::ENOENT => e
-    save_response(env, 418, { 'error' => e.message })
+    save_response(env, 418, MultiJson.dump('error' => e.message))
   end
 
   private
